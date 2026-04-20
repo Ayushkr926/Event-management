@@ -12,9 +12,11 @@ class AppColors {
   // 🌑 Backgrounds
   static const Color background = Colors.black;
   static const Color surface = Color(0xff181A25);
+  static const Color cardcolor = Color(0xff171717);
+  static const Color seccard = Color(0xff2C2E2F);
 
   // ⚪ Text Colors
-  static const Color textPrimary = Colors.white;
+  static const Color textPrimary = Colors.grey;
   static const Color textSecondary = Colors.white70;
   static const Color textMuted = Colors.white54;
 

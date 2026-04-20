@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../floatingbottomnav.dart';
+import '../services/auth_service.dart';
+import '../services/user_service.dart';
+import '../upcoming_events/Date/horizontal_date_picker.dart';
 import 'home_provider.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -19,73 +23,87 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomNavigationBar: _bottomNav(),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  [
-                    const SizedBox(height: 12),
-                    _header(),
-                    const SizedBox(height: 6),
-                    _locationSelector(),
-                    const SizedBox(height: 20),
-                    _searchBar(),
-                    const SizedBox(height: 26),
-                    _sectionTitle("Categories"),
-                    const SizedBox(height: 12),
-                    _categoryChips(),
-                    const SizedBox(height: 26),
-                    _sectionTitle("Trending This Week"),
-                    const SizedBox(height: 14),
-                    _trendingCard(context,islike),
-                    const SizedBox(height: 30),
-                    _sectionTitle("Events Near You"),
-                    const SizedBox(height: 14),
-                  ],
+      // bottomNavigationBar: _bottomNav(),
+      body: Stack(
+        children: [
+          SafeArea(
+            child: CustomScrollView(
+              slivers: [
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate(
+                      [
+                        const SizedBox(height: 12),
+                        _header(context),
+                        const SizedBox(height: 6),
+                        _locationSelector(context),
+                        const SizedBox(height: 20),
+                        _searchBar(),
+                        const SizedBox(height: 26),
+                        _sectionTitle("Categories",context,(){}),
+                        const SizedBox(height: 12),
+                        _categoryChips(),
+                        const SizedBox(height: 26),
+                        _sectionTitle("Trending This Week",context,(){}),
+                        const SizedBox(height: 14),
+                        _trendingCard(context,islike),
+                        const SizedBox(height: 30),
+                        _sectionTitle("Events Near You",context,(){Navigator.push(context, MaterialPageRoute(builder: (context)=>HorizontalDatePicker()));}),
+                        const SizedBox(height: 14),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
-            // EVENTS LIST
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                      (context, index) => eventCard(isFree: true,index:index),
-                  childCount: 6,
+                // EVENTS LIST
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                          (context, index) => eventCard(isFree: true,index:index),
+                      childCount: 6,
+                    ),
+                  ),
                 ),
-              ),
-            ),
 
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 40),
+                const SliverToBoxAdapter(
+                  child: SizedBox(height: 40),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          const FloatingBottomNav(),
+        ],
       ),
     );
   }
 
   // ================= HEADER =================
 
-  Widget _header() {
+  Widget _header(BuildContext context) {
+    final userService = Provider.of<UserService>(context);
+    final user = userService.currentUserModel;
+
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 22,
-          backgroundImage: AssetImage("assets/images/profile.jpg"),
+          backgroundColor: const Color(0xff1E1E2A),
+          backgroundImage: (user?.photoUrl != null && user!.photoUrl.isNotEmpty)
+              ? NetworkImage(user.photoUrl)
+              : null,
+          child: (user?.photoUrl == null || user!.photoUrl.isEmpty)
+              ? const Icon(Icons.person, color: Colors.white54, size: 24)
+              : null,
         ),
         const Spacer(),
         Column(
-          children: const [
-            Text("Welcome Back",
+          children: [
+            const Text("Welcome Back",
                 style: TextStyle(color: Colors.white54, fontSize: 13)),
-            Text("Ayush Kumar",
-                style: TextStyle(
+            Text(user?.displayName ?? 'User',
+                style: const TextStyle(
                     color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.w600)),
@@ -97,16 +115,21 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _locationSelector() {
+  Widget _locationSelector(BuildContext context) {
+    final userService = Provider.of<UserService>(context);
+    final user = userService.currentUserModel;
+    final location = (user?.location != null && user!.location.isNotEmpty)
+        ? user.location
+        : 'Set Location';
+
     return Center(
       child: Row(
         mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.location_on, size: 16, color: Colors.white54),
-          SizedBox(width: 4),
-          Text("New Delhi, India",
-              style: TextStyle(color: Colors.white54)),
-          Icon(Icons.keyboard_arrow_down, color: Colors.white54),
+        children: [
+          const Icon(Icons.location_on, size: 16, color: Colors.white54),
+          const SizedBox(width: 4),
+          Text(location, style: const TextStyle(color: Colors.white54)),
+          const Icon(Icons.keyboard_arrow_down, color: Colors.white54),
         ],
       ),
     );
@@ -553,7 +576,7 @@ class HomeScreen extends StatelessWidget {
 
   // ================= COMMON =================
 
-  Widget _sectionTitle(String title) {
+  Widget _sectionTitle(String title,BuildContext context,void Function() onTap) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -562,7 +585,9 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600)),
-        const Text("See all", style: TextStyle(color: Colors.white54)),
+         InkWell(
+             onTap: onTap,
+             child: Text("See all", style: TextStyle(color: Colors.white54))),
       ],
     );
   }

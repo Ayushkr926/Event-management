@@ -1,7 +1,10 @@
 import 'package:event_management/utils/color.dart';
+import 'package:event_management/services/auth_service.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../Auth/codescreen.dart';
+import '../Home/home_screen.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -231,7 +234,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               width: 22,
             ),
             text: "Sign in with Google",
-            onTap: () {},
+            onTap: () => _handleGoogleSignIn(context),
             bgcolor: Colors.white,
             fgcolor: Colors.black,
           ),
@@ -412,10 +415,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                onPressed: () {
-                  // TODO: validate email + continue
-                  Navigator.push(context, MaterialPageRoute(builder: (context)=>Codescreen(email: _emailctrl.text.trim(),)));
-                },
+                onPressed: () => _handleEmailContinue(context),
                 child: const Text(
                   "Continue",
                   style: TextStyle(
@@ -622,4 +622,60 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  // ================= AUTH HANDLERS =================
+
+  Future<void> _handleGoogleSignIn(BuildContext context) async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    final result = await authService.signInWithGoogle();
+
+    if (!mounted) return;
+
+    if (result != null) {
+      // Auth state change will trigger AuthGate to navigate
+      // No manual navigation needed
+    } else if (authService.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authService.error!),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      authService.clearError();
+    }
+  }
+
+  void _handleEmailContinue(BuildContext context) {
+    final email = _emailctrl.text.trim();
+    if (email.isEmpty || !email.contains('@')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please enter a valid email address'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
+
+    // Send email link for passwordless sign-in
+    final authService = Provider.of<AuthService>(context, listen: false);
+    authService.sendSignInLinkToEmail(email).then((_) {
+      if (!mounted) return;
+      if (authService.error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(authService.error!),
+            backgroundColor: Colors.red.shade700,
+          ),
+        );
+        authService.clearError();
+      } else {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Codescreen(email: email),
+          ),
+        );
+      }
+    });
+  }
 }
